@@ -264,7 +264,6 @@ export default class CardSync extends Plugin {
       );
 
       if (file === null) {
-        console.log("file does nto exist");
         try {
           file = await this.app.vault.create(filePath, "");
         } catch (e) {
@@ -282,7 +281,6 @@ export default class CardSync extends Plugin {
         console.warn("could not create or find file? ");
         return;
       }
-      console.log(card, cardId);
 
       const note = getSingleProp(parsed, "NOTE");
 
