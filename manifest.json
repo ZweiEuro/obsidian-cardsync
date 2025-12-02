@@ -1,0 +1,11 @@
+{
+  "id": "cardsync",
+  "name": "Card Sync",
+  "version": "0.0.1",
+  "minAppVersion": "1.7.2",
+  "description": "Card sync plugin to sync carddav compatible contact lists",
+  "author": "NoName",
+  "authorUrl": "NoUrl",
+  "fundingUrl": "NoFunding",
+  "isDesktopOnly": false
+}
