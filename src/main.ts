@@ -277,12 +277,6 @@ export default class CardSync extends Plugin {
           );
           return;
         }
-      } else {
-        // check if the name changed
-        if (file.name !== `${fn}.md`) {
-          console.log("moving, name missmatch ", file.name, fn);
-          await this.app.vault.rename(file, `${file.parent!.path}/${fn}.md`);
-        }
       }
 
       if (!file) {
@@ -332,6 +326,15 @@ export default class CardSync extends Plugin {
           }
         }
       });
+
+      // check if the name changed
+      if (file.name !== `${fn}.md`) {
+        console.log("moving, name missmatch ", file.name, fn);
+        await this.app.fileManager.renameFile(
+          file,
+          `${file.parent!.path}/${fn}.md`,
+        );
+      }
     }
 
     new Notice(`Success downloading ${cards.length} contacts`);
