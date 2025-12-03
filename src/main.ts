@@ -277,16 +277,23 @@ export default class CardSync extends Plugin {
           );
           return;
         }
+      } else {
+        // check if the name changed
+        if (file.name !== `${fn}.md`) {
+          console.log("moving, name missmatch ", file.name, fn);
+          await this.app.vault.rename(file, `${file.parent!.path}/${fn}.md`);
+        }
       }
 
       if (!file) {
         console.warn("could not create or find file? ");
         return;
       }
+
       const note = getSingleProp(parsed, "note");
 
       if (note) {
-        await file.vault.modify(file, `# Note:\n${note}`);
+        await this.app.vault.modify(file, `# Note:\n${note}`);
       }
 
       await this.app.fileManager.processFrontMatter(file, (fm) => {
