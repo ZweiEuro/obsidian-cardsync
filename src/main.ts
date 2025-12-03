@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 
-import { DAVAccount, fetchAddressBooks, fetchVCards } from "tsdav";
+import { DAVAccount, fetchAddressBooks, fetchVCards, updateVCard } from "tsdav";
 
 import vCard from "vcard-parser";
 
@@ -57,23 +57,21 @@ export default class CardSync extends Plugin {
       },
     });
 
-    if (false) {
-      this.addRibbonIcon(
-        "arrow-up-from-line",
-        "CardSync Write",
-        (_: MouseEvent) => {
-          this.syncUpClient();
-        },
-      );
+    this.addRibbonIcon(
+      "arrow-up-from-line",
+      "CardSync Write",
+      (_: MouseEvent) => {
+        this.syncUpClient();
+      },
+    );
 
-      this.addCommand({
-        id: "cardsync-sync-up",
-        name: "Sync contacts folder up",
-        callback: () => {
-          this.syncUpClient();
-        },
-      });
-    }
+    this.addCommand({
+      id: "cardsync-sync-up",
+      name: "Sync contacts folder up",
+      callback: () => {
+        this.syncUpClient();
+      },
+    });
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.settingsTab = new CardsyncSettingsTab(this.app, this);
@@ -217,7 +215,6 @@ export default class CardSync extends Plugin {
 
       const parsed: card_t = vCard.parse(card.data);
 
-      console.log(parsed);
       if (Array.isArray(parsed)) {
         console.warn(
           "A contact parsed out as an array instead of a single entry. Cannot parse",
@@ -284,7 +281,6 @@ export default class CardSync extends Plugin {
         console.warn("could not create or find file? ");
         return;
       }
-      console.log(parsed);
       const note = getSingleProp(parsed, "note");
 
       if (note) {
@@ -323,133 +319,154 @@ export default class CardSync extends Plugin {
   }
 
   async syncUpClient(): Promise<void> {
-    //   await this.validateClient();
-    //
-    //   const headers = {
-    //     authorization: authenticate(
-    //       this.settings.username,
-    //       this.settings.password,
-    //     ),
-    //   };
-    //
-    //   const account: DAVAccount = {
-    //     accountType: "carddav",
-    //     serverUrl: this.settings.serverUrl,
-    //     rootUrl: this.settings.rootUrl,
-    //     homeUrl: this.settings.homeUrl,
-    //   };
-    //
-    //   const addressBooks = await fetchAddressBooks({
-    //     account: account,
-    //     headers: headers,
-    //   });
-    //
-    //   if (addressBooks.length !== 1) {
-    //     console.warn(
-    //       "Cannot determine adressbook. The credentials and info must return a SINGLE adressbook.",
-    //     );
-    //     return;
-    //   }
-    //
-    //   const addressBook = addressBooks[0];
-    //
-    //   const cards = await fetchVCards({
-    //     addressBook: addressBook,
-    //     headers: headers,
-    //   });
-    //
-    //   for (const card of cards) {
-    //     if (
-    //       typeof card.data !== "string" || card.data === null ||
-    //       card.data === undefined
-    //     ) {
-    //       console.warn(
-    //         "A contact in the list did not return its' data a as a 'string'. Cannot parse.",
-    //       );
-    //       return;
-    //     }
-    //
-    //     const parsed = parsevcard(card.data);
-    //
-    //     if (Array.isArray(parsed)) {
-    //       console.warn(
-    //         "A contact parsed out as an array instead of a single entry. Cannot parse",
-    //       );
-    //       return;
-    //     }
-    //
-    //     // get the unique ID for the current card
-    //     const idPropKey = this.settings.cardIdKey;
-    //     const idProp = getSingleProp(parsed, idPropKey);
-    //     if (!idProp) {
-    //       console.error(
-    //         `Contacts require the ID field set by your settings ${idPropKey}, must have single entry`,
-    //         idProp,
-    //       );
-    //     }
-    //
-    //     let cardId = idProp?.value ?? null;
-    //     if (!cardId) {
-    //       console.error("Contact missing id?", card, parsed);
-    //       return;
-    //     }
-    //     if (cardId) {
-    //       // remove any nesting
-    //       cardId = cardId.replaceAll(/[\"|']/g, "");
-    //     }
-    //
-    //     const fileFolder = this.settings.syncFolderLocation;
-    //
-    //     // get a new file or find the existing file
-    //     const file = await findFileByFrontmatter(
-    //       this.app,
-    //       fileFolder,
-    //       idPropKey,
-    //       cardId,
-    //     );
-    //
-    //     if (file === null) {
-    //       console.error("could not find file for ID", idPropKey);
-    //       continue;
-    //     }
-    //
-    //     return;
-    //
-    //     // await this.app.fileManager.processFrontMatter(file, (fm) => {
-    //     //   fm["obs_sync_url"] = card.url;
-    //     //
-    //     //   for (const prop of parsed.properties) {
-    //     //     // map the prop into a single value or an array
-    //     //     const propObj = parsed.getProperty(prop);
-    //     //     if (propObj.length === 0) {
-    //     //       continue;
-    //     //     }
-    //     //     const propName = propObj[0].property;
-    //     //
-    //     //     if (fm.hasOwn(propName)) {
-    //     //       parsed.getProperty();
-    //     //     }
-    //     //
-    //     //     if (propObj.length === 1) {
-    //     //       switch (propName) {
-    //     //         case "X-ALIASES":
-    //     //           fm["aliases"] = propObj[0].value.split(",");
-    //     //           break;
-    //     //         case "NOTE":
-    //     //           //skip
-    //     //           break;
-    //     //         default:
-    //     //           fm[propName] = propObj[0].value;
-    //     //           break;
-    //     //       }
-    //     //     } else if (propObj.length > 1) {
-    //     //       fm[propName] = propObj.map((v) => v.value);
-    //     //     }
-    //     //   }
-    //     // });
-    //     //
-    //     // console.log(card, fontMatter);
-    //   }
+    await this.validateClient();
+
+    const headers = {
+      authorization: authenticate(
+        this.settings.username,
+        this.settings.password,
+      ),
+    };
+
+    const account: DAVAccount = {
+      accountType: "carddav",
+      serverUrl: this.settings.serverUrl,
+      rootUrl: this.settings.rootUrl,
+      homeUrl: this.settings.homeUrl,
+    };
+
+    const addressBooks = await fetchAddressBooks({
+      account: account,
+      headers: headers,
+    });
+
+    if (addressBooks.length !== 1) {
+      console.warn(
+        "Cannot determine adressbook. The credentials and info must return a SINGLE adressbook.",
+      );
+      return;
+    }
+
+    const addressBook = addressBooks[0];
+
+    const cards = await fetchVCards({
+      addressBook: addressBook,
+      headers: headers,
+    });
+
+    for (const card of cards) {
+      if (
+        typeof card.data !== "string" || card.data === null ||
+        card.data === undefined
+      ) {
+        console.warn(
+          "A contact in the list did not return its' data a as a 'string'. Cannot parse.",
+        );
+        return;
+      }
+
+      const parsed: card_t = vCard.parse(card.data);
+      const parsedStringRepr = JSON.stringify(parsed);
+
+      if (Array.isArray(parsed)) {
+        console.warn(
+          "A contact parsed out as an array instead of a single entry. Cannot parse",
+        );
+        return;
+      }
+
+      const fn = getSingleProp(parsed, "fn");
+
+      if (!fn) {
+        console.warn(
+          "A contact does not have an expected 'FN' (Full name) field. The property is expected to be an array with a single entry that has a non empty string value.",
+        );
+        return;
+      }
+
+      // get the unique ID for the current card
+      const idPropKey = this.settings.cardIdKey;
+      let cardId = getSingleProp(parsed, idPropKey);
+      if (!cardId) {
+        console.error(
+          `Contacts require the ID field set by your settings ${idPropKey}, must have single entry`,
+          cardId,
+        );
+        return;
+      }
+
+      if (!cardId) {
+        console.error("Contact missing id?", card, parsed);
+        return;
+      }
+      if (cardId) {
+        // remove any nesting
+        cardId = cardId.replaceAll(/[\"|']/g, "");
+      }
+      // open existing files if possible
+
+      const fileFolder = this.settings.syncFolderLocation;
+
+      // get a new file or find the existing file
+      const file = await findFileByFrontmatter(
+        this.app,
+        fileFolder,
+        idPropKey,
+        cardId,
+      );
+
+      if (file === null) {
+        console.error("could not find file for ID", idPropKey, cardId);
+        continue;
+      }
+
+      // extract the "note" section
+
+      const content = await this.app.vault.read(file);
+      const split = content.split("# Note:\n");
+
+      if (split.length === 1) {
+        // there is no note
+      } else if (split.length === 2) {
+        parsed["note"] = [{ value: split.at(1) ?? "" }];
+      }
+
+      // update aliases, and get the update url
+
+      let cardUrl: string | null = null;
+
+      {
+        let aliases: string[] | null = [];
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
+          aliases = fm["aliases"] ?? null;
+          cardUrl = fm["obs_sync_url"] ?? null;
+        });
+
+        if (aliases) {
+          parsed["X-ALIASES"] = [{ value: aliases.join(",") }];
+        }
+      }
+
+      if (!cardUrl) {
+        console.warn("Could not get update url from file/card id", cardId);
+        continue;
+      }
+
+      if (parsedStringRepr === JSON.stringify(parsed)) {
+        /// nothing changed, skip
+        continue;
+      }
+
+      await updateVCard({
+        vCard: {
+          url: cardUrl,
+          data: vCard.generate(parsed),
+        },
+
+        headers: headers,
+      });
+      console.log("updated", cardId);
+    }
   }
 }
 

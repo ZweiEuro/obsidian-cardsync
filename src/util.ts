@@ -76,7 +76,8 @@ export async function findFileByFrontmatter(
     const cache = app.metadataCache.getFileCache(file);
 
     if (cache?.frontmatter) {
-      const value = cache.frontmatter[frontmatterKey];
+      const value = cache.frontmatter[frontmatterKey] ??
+        cache.frontmatter[frontmatterKey.toLowerCase()];
 
       // Check if value matches
       if (value === frontmatterValue) {
