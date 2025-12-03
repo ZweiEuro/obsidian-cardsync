@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 import { App, FuzzySuggestModal, TFile, TFolder } from "obsidian";
 
+// FIXME: Make a wrapper class around a single card.
+// Main benefit: make getters that ignore internal casing since apparently thats not standard
 export type card_t = Record<string, { value: string | string[] }[] | undefined>;
 
 // assume that the key opens a prop, the prop only exists once and has only one value
@@ -61,7 +63,7 @@ export async function findFileByFrontmatter(
   app: App,
   folderPath: string,
   frontmatterKey: string,
-  frontmatterValue: any,
+  frontmatterValue: string,
 ): Promise<TFile | null> {
   // Get all files in the vault
   const files = app.vault.getMarkdownFiles();

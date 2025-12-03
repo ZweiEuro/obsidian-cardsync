@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 import { DAVAccount, fetchAddressBooks, fetchVCards, updateVCard } from "tsdav";
 
@@ -272,6 +272,8 @@ export default class CardSync extends Plugin {
             filePath,
             "if you manually changed etag values you might have accidentally corrupted a file. Remove the offenting contact.",
             e,
+            "id",
+            cardId,
           );
           return;
         }
@@ -292,30 +294,40 @@ export default class CardSync extends Plugin {
 
         for (const propKey of Object.keys(parsed)) {
           // map the prop into a single value or an array
-          const proValue = parsed[propKey];
-          if (!proValue || proValue.length === 0) {
+          const propValue = parsed[propKey];
+          if (!propValue || propValue.length === 0) {
             continue;
           }
           delete fm[propKey];
 
-          if (proValue.length === 1) {
-            switch (propKey) {
-              case "X-ALIASES":
-                fm["aliases"] = getSingleProp(parsed, "X-ALIASES")!.split(",");
-                break;
-              case "NOTE":
-                //skip
-                break;
-              default:
-                fm[propKey] = proValue[0].value;
-                break;
-            }
-          } else if (proValue.length > 1) {
-            fm[propKey] = proValue.map((v) => v.value);
+          switch (propKey) {
+            case "X-ALIASES":
+              fm["aliases"] = getSingleProp(parsed, "X-ALIASES")!.split(",");
+              break;
+            case "categories":
+              const categories = propValue.at(0)!.value;
+              if (Array.isArray(categories)) {
+                fm["tags"] = propValue[0].value;
+              } else {
+                fm["tags"] = [propValue[0].value];
+              }
+
+              break;
+            case "note":
+              //skip, parsed beforehand
+              break;
+            default:
+              if (propValue.length === 1) {
+                fm[propKey] = propValue[0].value;
+              } else if (propValue.length > 1) {
+                fm[propKey] = propValue.map((v) => v.value);
+              }
           }
         }
       });
     }
+
+    new Notice(`Success downloading ${cards.length} contacts`);
   }
 
   async syncUpClient(): Promise<void> {
@@ -354,6 +366,7 @@ export default class CardSync extends Plugin {
       headers: headers,
     });
 
+    let updated = 0;
     for (const card of cards) {
       if (
         typeof card.data !== "string" || card.data === null ||
@@ -434,17 +447,20 @@ export default class CardSync extends Plugin {
       // update aliases, and get the update url
 
       let cardUrl: string | null = null;
+      let aliases: string[] | null = null as null | string[];
+      let categories: string[] | null = null as null | string[];
 
-      {
-        let aliases: string[] | null = [];
-        await this.app.fileManager.processFrontMatter(file, (fm) => {
-          aliases = fm["aliases"] ?? null;
-          cardUrl = fm["obs_sync_url"] ?? null;
-        });
+      await this.app.fileManager.processFrontMatter(file, (fm) => {
+        aliases = fm["aliases"] ?? null;
+        categories = fm["tags"] ?? null;
+        cardUrl = fm["obs_sync_url"] ?? null;
+      });
 
-        if (aliases) {
-          parsed["X-ALIASES"] = [{ value: aliases.join(",") }];
-        }
+      if (aliases) {
+        parsed["X-ALIASES"] = [{ value: aliases.join(",") }];
+      }
+      if (categories) {
+        parsed["categories"] = [{ value: categories }];
       }
 
       if (!cardUrl) {
@@ -465,8 +481,9 @@ export default class CardSync extends Plugin {
 
         headers: headers,
       });
-      console.log("updated", cardId);
+      updated += 1;
     }
+    new Notice(`Success updating ${updated} contacts`);
   }
 }
 
@@ -486,17 +503,21 @@ class CardsyncSettingsTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl).setDesc(
-      `This plugin uses https://tsdav.vercel.app/docs/carddav/fetchAddressBooks and https://www.npmjs.com/package/vcard4 \r
-Note that it is NOT a good idea to create a new field by writing it manually, use thunderbird or another editor for that and then edit the value.\r
+      `This plugin uses https://tsdav.vercel.app/docs/carddav/fetchAddressBooks and https://www.npmjs.com/package/vcard-parser \r
+Note that it is NOT a good idea to create a new field by writing it manually, use thunderbird or another editor for that and then edit the value (just to make sure the type fields are formatted as expected.\r
 Changing any kind of ID can have unintended side effects with other software!`,
     );
 
     new Setting(containerEl).setDesc(
-      "The plugin will copy the 'X-Aliases' prop to 'Aliases' so obsidian can find it. The field is ignored when syncing. The single-string field is split at ',' for multiple aliases.",
+      "Fetching remote data will force-overwrite any local changes.",
     );
 
     new Setting(containerEl).setDesc(
-      "This plugin will always fetch on software start (overwriting ANY local changes). It also WILL NOT sync unknown contacts, create contacts on other devices first so the have a unique UID.",
+      "I am equating tags-> categories, aliases -> X-ALIASES, note -> file body. ONLY those fields are actually updated. the rest is READ ONLY.",
+    );
+
+    new Setting(containerEl).setDesc(
+      "This was only tested with /e/os on my phone and thunderbird in combination with a radicale server. If you want to use radicale you will need to add CORS headers to its config.",
     );
 
     const makeTextSetting = (
