@@ -21,7 +21,7 @@
     "npm:globals@^16.3.0": "16.3.0",
     "npm:obsidian@1.8.7": "1.8.7_@codemirror+state@6.5.2_@codemirror+view@6.37.1",
     "npm:tsdav@^2.1.6": "2.1.6",
-    "npm:vcard4@^4.0.2": "4.0.2"
+    "npm:vcard-parser@1": "1.0.0"
   },
   "jsr": {
     "@david/console-static-text@0.3.0": {
@@ -2310,8 +2310,8 @@
         "punycode"
       ]
     },
-    "vcard4@4.0.2": {
-      "integrity": "sha512-kVpyQgM7IoNy2VS0Oz7/kW30sFyZTnHXEbhjFoIRPVFo8QOQLzsofRbaFZurlkGXGROU6Ti7Z5ZlhgRCvgSuBA=="
+    "vcard-parser@1.0.0": {
+      "integrity": "sha512-rSEjrjBK3of4VimMR5vBjLLcN5ZCSp9yuVzyx5i4Fwx74Yd0s+DnHtSit/wAAtj1a7/T/qQc0ykwXADoD0+fTQ=="
     },
     "w3c-keyname@2.2.8": {
       "integrity": "sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ=="
@@ -2417,7 +2417,7 @@
       "npm:globals@^16.3.0",
       "npm:obsidian@1.8.7",
       "npm:tsdav@^2.1.6",
-      "npm:vcard4@^4.0.2"
+      "npm:vcard-parser@1"
     ]
   }
 }

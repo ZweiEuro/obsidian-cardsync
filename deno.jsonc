@@ -18,7 +18,7 @@
     "globals": "npm:globals@^16.3.0",
     "obsidian": "npm:obsidian@1.8.7",
     "tsdav": "npm:tsdav@^2.1.6",
-    "vcard4": "npm:vcard4@^4.0.2"
+    "vcard-parser": "npm:vcard-parser@^1.0.0"
   },
   "nodeModulesDir": "auto",
   "tasks": {

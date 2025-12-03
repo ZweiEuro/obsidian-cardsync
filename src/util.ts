@@ -1,17 +1,29 @@
 import { Buffer } from "node:buffer";
 import { App, FuzzySuggestModal, TFile, TFolder } from "obsidian";
 
-import { parse as parsevcard } from "vcard4";
+export type card_t = Record<string, { value: string | string[] }[] | undefined>;
 
+// assume that the key opens a prop, the prop only exists once and has only one value
+// that value has only one entry in its array.
+// Then get that value
 export function getSingleProp(
-  card: ReturnType<typeof parsevcard>,
+  card: card_t,
   key: string,
 ) {
+  key = key.toLowerCase();
   if (Array.isArray(card)) return null;
 
-  const prop = card.getProperty(key);
-  if (prop.length === 1) {
-    return prop.at(0);
+  const prop = card[key] ?? card[key.toUpperCase()];
+
+  if (prop && prop.length === 1) {
+    const propVal = prop.at(0);
+
+    if (
+      propVal &&
+      !Array.isArray(propVal.value)
+    ) {
+      return propVal.value ?? null;
+    }
   }
 
   return null;
