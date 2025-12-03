@@ -470,7 +470,12 @@ export default class CardSync extends Plugin {
         parsed["X-ALIASES"] = [{ value: aliases.join(",") }];
       }
       if (categories) {
-        parsed["categories"] = [{ value: categories }];
+        // WE always make it to an array, but if it is a single value then it is expected to stay a single value
+        if (categories.length === 1) {
+          parsed["categories"] = [{ value: categories.at(0)! }];
+        } else {
+          parsed["categories"] = [{ value: categories }];
+        }
       }
 
       if (!cardUrl) {
@@ -492,6 +497,8 @@ export default class CardSync extends Plugin {
         headers: headers,
       });
       updated += 1;
+      console.debug("Updated ", cardId);
+      console.debug(JSON.parse(parsedStringRepr), parsed);
     }
     new Notice(`Success updating ${updated} contacts`);
   }
