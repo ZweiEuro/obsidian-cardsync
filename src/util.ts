@@ -1,4 +1,4 @@
-import { Buffer } from "node:buffer";
+import { Buffer } from "buffer";
 import { App, FuzzySuggestModal, TFile, TFolder } from "obsidian";
 
 export function authenticate(username: string, password: string) {

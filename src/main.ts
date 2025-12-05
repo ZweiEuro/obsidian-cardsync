@@ -8,6 +8,7 @@ import {
   FolderSuggestModal,
 } from "./util.ts";
 import { cardParse } from "@zweieuro/davparse";
+
 interface CardSyncSettings {
   username: string;
   password: string;
