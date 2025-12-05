@@ -205,7 +205,7 @@ export function parseVCards(vCardString: string): vCard[] {
       const property = parseLine(lineStr);
 
       if (property.propName === "VERSION" && property.value !== "4.0") {
-        throw new Error("VERSION did not equal 4.0");
+        // throw new Error("VERSION did not equal 4.0");
       }
 
       card.set(property);

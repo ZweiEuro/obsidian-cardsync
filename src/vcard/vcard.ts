@@ -63,6 +63,10 @@ export function repr(cardProp: cardProp_t) {
 export class vCard {
   private data: Map<string, cardProp_t> = new Map();
 
+  public get_data() {
+    return this.data;
+  }
+
   public set(prop: cardProp_t) {
     prop.propName = prop.propName.toUpperCase();
     this.data.set(prop.propName, prop);
@@ -70,6 +74,34 @@ export class vCard {
 
   public get(key: string) {
     return this.data.get(key.toUpperCase()) ?? null;
+  }
+
+  // Assume a property is a single string, get it if so.
+  // else return null
+  public getSingleVal(key: string) {
+    const data = this.data.get(key.toUpperCase()) ?? null;
+    if (!data) {
+      return null;
+    }
+
+    if (typeof data.value !== "string") {
+      return null;
+    }
+    return data.value;
+  }
+
+  // Assume a property is an array val, get it if so.
+  // else return null
+  public getArrayVal(key: string) {
+    const data = this.data.get(key.toUpperCase()) ?? null;
+    if (!data) {
+      return null;
+    }
+
+    if (typeof data.value === "string") {
+      return null;
+    }
+    return data.value;
   }
 
   public repr() {
