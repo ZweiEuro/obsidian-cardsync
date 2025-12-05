@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:9570172d-0efa-4828-b1d6-66a8353c4c6f
+FN:test2 test2
+N:test2;test2;;;
+NOTE:special value test:\n< > : @ ? ~ { } + _ ) ( * & ^ % $ £ " !\n[ ] \\\
+ ; ' # \, . / = - ` ¬ |\nLeading space:\n here\nmanual backslash n: \\n
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+PRODID:+//IDN bitfire.at//DAVx5/4.5.5-ose ez-vcard/0.12.1 (ez-vcard/0.12.1)
+UID:2ebda66a-22c2-4d09-b93d-29bcd5079b0a
+CATEGORIES:newcat,teeeeest,test2cat,testcategory
+EMAIL;PREF=1;TYPE=home:msil@b.c
+FN:test test1
+N:test1;test;;;
+NOTE:Not that will cause a line break..............................
+REV:20251204T091726Z
+X-ALIASES:testalias\,alias2\,newAlias
+X-CUSTOM1;VALUE=TEXT:awdw
+END:VCARD
