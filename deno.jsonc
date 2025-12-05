@@ -12,6 +12,7 @@
   "imports": {
     "@david/dax": "jsr:@david/dax@0.43.2",
     "@std/semver": "jsr:@std/semver@^1.0.5",
+    "zweieuro/davparse": "jsr:@zweieuro/davparse@^0.1.0",
     "esbuild": "npm:esbuild@0.25.5",
     "eslint": "npm:eslint@^9.34.0",
     "eslint-plugin-obsidianmd": "npm:eslint-plugin-obsidianmd@^0.1.4",

@@ -14,6 +14,7 @@
     "jsr:@std/path@1": "1.1.0",
     "jsr:@std/path@^1.1.0": "1.1.0",
     "jsr:@std/semver@^1.0.5": "1.0.5",
+    "jsr:@zweieuro/davparse@0.1": "0.1.0",
     "npm:@types/node@*": "22.15.15",
     "npm:esbuild@0.25.5": "0.25.5",
     "npm:eslint-plugin-obsidianmd@~0.1.4": "0.1.4_@eslint+js@9.34.0_eslint@9.34.0_typescript-eslint@8.42.0__eslint@9.34.0__typescript@5.4.5__@typescript-eslint+parser@8.42.0___eslint@9.34.0___typescript@5.4.5_typescript@5.4.5",
@@ -82,6 +83,9 @@
     },
     "@std/semver@1.0.5": {
       "integrity": "529f79e83705714c105ad0ba55bec0f9da0f24d2f726b6cc1c15e505cc2c0624"
+    },
+    "@zweieuro/davparse@0.1.0": {
+      "integrity": "cf72617059fee3561986328198464ffa002a2c0ea46751893de6bacb1a234694"
     }
   },
   "npm": {
@@ -2418,6 +2422,7 @@
     "dependencies": [
       "jsr:@david/dax@0.43.2",
       "jsr:@std/semver@^1.0.5",
+      "jsr:@zweieuro/davparse@0.1",
       "npm:esbuild@0.25.5",
       "npm:eslint-plugin-obsidianmd@~0.1.4",
       "npm:eslint@^9.34.0",

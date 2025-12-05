@@ -38,6 +38,7 @@ const context = await esbuild.context({
     "@lezer/common",
     "@lezer/highlight",
     "@lezer/lr",
+    "@zweieuro/davparse",
     // for desktop only plugins
     ...builtinModules,
     ...builtinModules.map((m) => `node:${m}`),

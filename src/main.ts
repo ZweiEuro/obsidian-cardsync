@@ -4,13 +4,10 @@ import { DAVAccount, fetchAddressBooks, fetchVCards, updateVCard } from "tsdav";
 
 import {
   authenticate,
-  card_t,
   findFileByFrontmatter,
   FolderSuggestModal,
-  getSingleProp,
 } from "./util.ts";
-import { parseVCards } from "./vcard/card.ts";
-
+import { cardParse } from "@zweieuro/davparse";
 interface CardSyncSettings {
   username: string;
   password: string;
@@ -147,7 +144,7 @@ export default class CardSync extends Plugin {
         return "A contact in the list did not return its' data a as a 'string'. Cannot parse.";
       }
 
-      const parsed_list = parseVCards(card.data);
+      const parsed_list = cardParse.parseVCards(card.data);
 
       if (parsed_list.length !== 1) {
         return "Only a single contact may exist in any dataset of a dav entry";
@@ -214,7 +211,7 @@ export default class CardSync extends Plugin {
         return;
       }
 
-      const parsed_list = parseVCards(card.data);
+      const parsed_list = cardParse.parseVCards(card.data);
 
       if (parsed_list.length !== 1) {
         console.error(
