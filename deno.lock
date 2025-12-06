@@ -5,14 +5,18 @@
     "jsr:@david/dax@0.43.2": "0.43.2",
     "jsr:@david/path@0.2": "0.2.0",
     "jsr:@david/which@~0.4.1": "0.4.1",
+    "jsr:@deno/esbuild-plugin@^1.2.1": "1.2.1",
+    "jsr:@deno/loader@~0.3.10": "0.3.10",
     "jsr:@std/bytes@^1.0.5": "1.0.6",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fs@1": "1.0.20",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/io@0.225": "0.225.2",
     "jsr:@std/path@1": "1.1.3",
+    "jsr:@std/path@^1.1.1": "1.1.3",
     "jsr:@std/path@^1.1.3": "1.1.3",
     "jsr:@std/semver@^1.0.5": "1.0.7",
+    "jsr:@zweieuro/davparse@*": "0.1.0",
     "jsr:@zweieuro/davparse@0.1": "0.1.0",
     "npm:buffer@^6.0.3": "6.0.3",
     "npm:esbuild@0.25.5": "0.25.5",
@@ -47,6 +51,16 @@
     },
     "@david/which@0.4.1": {
       "integrity": "896a682b111f92ab866cc70c5b4afab2f5899d2f9bde31ed00203b9c250f225e"
+    },
+    "@deno/esbuild-plugin@1.2.1": {
+      "integrity": "df629467913adc1f960149fdfa3a3430ba8c20381c310fba096db244e6c3c9f6",
+      "dependencies": [
+        "jsr:@deno/loader",
+        "jsr:@std/path@^1.1.1"
+      ]
+    },
+    "@deno/loader@0.3.10": {
+      "integrity": "a9c0aa44a0499e7fecef52c29fbc206c1c8f8946388f25d9d0789a23313bfd43"
     },
     "@std/bytes@1.0.6": {
       "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
@@ -2262,6 +2276,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@david/dax@0.43.2",
+      "jsr:@deno/esbuild-plugin@^1.2.1",
       "jsr:@std/semver@^1.0.5",
       "jsr:@zweieuro/davparse@0.1",
       "npm:buffer@^6.0.3",

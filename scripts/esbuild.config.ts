@@ -2,6 +2,8 @@ import { builtinModules } from "node:module";
 import esbuild from "esbuild";
 import $ from "@david/dax";
 import process from "node:process";
+import { resolve } from "jsr:@std/path@^1.1.3";
+import { denoPlugin } from "@deno/esbuild-plugin";
 
 const prod = process.argv[2] === "production";
 
@@ -38,6 +40,7 @@ const context = await esbuild.context({
     "@lezer/common",
     "@lezer/highlight",
     "@lezer/lr",
+    "encoding",
     // for desktop only plugins
     ...builtinModules,
     ...builtinModules.map((m) => `node:${m}`),
@@ -49,6 +52,7 @@ const context = await esbuild.context({
   treeShaking: true,
   minify: prod,
   plugins: [
+    denoPlugin(),
     {
       name: "copy-manifest",
       setup(build) {
