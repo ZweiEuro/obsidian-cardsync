@@ -29,6 +29,22 @@ export class FolderSuggestModal extends FuzzySuggestModal<TFolder> {
   }
 }
 
+export async function createOrGetFile(app: App, path: string) {
+  const file = app.vault.getFileByPath(path);
+  if (!file) {
+    return await app.vault.create(path, "");
+  }
+  return file;
+}
+
+export async function creatBinaryOrGetFile(app: App, path: string) {
+  const file = app.vault.getFileByPath(path);
+  if (!file) {
+    return await app.vault.createBinary(path, new ArrayBuffer());
+  }
+  return file;
+}
+
 export async function findFileByFrontmatter(
   app: App,
   folderPath: string,

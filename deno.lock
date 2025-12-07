@@ -16,10 +16,10 @@
     "jsr:@std/path@^1.1.1": "1.1.3",
     "jsr:@std/path@^1.1.3": "1.1.3",
     "jsr:@std/semver@^1.0.5": "1.0.7",
-    "jsr:@zweieuro/davparse@*": "0.1.0",
-    "jsr:@zweieuro/davparse@0.1": "0.1.0",
+    "npm:@types/node@*": "22.15.15",
     "npm:buffer@^6.0.3": "6.0.3",
     "npm:esbuild@0.25.5": "0.25.5",
+    "npm:esbuild@~0.25.5": "0.25.5",
     "npm:eslint-plugin-obsidianmd@~0.1.4": "0.1.9_@eslint+js@9.39.1_@eslint+json@0.14.0_eslint@9.39.1_obsidian@1.8.7__@codemirror+state@6.5.2__@codemirror+view@6.38.8_typescript-eslint@8.48.1__eslint@9.39.1__typescript@5.4.5__@typescript-eslint+parser@8.48.1___eslint@9.39.1___typescript@5.4.5_typescript@5.4.5",
     "npm:eslint@^9.34.0": "9.39.1",
     "npm:globals@^16.3.0": "16.5.0",
@@ -56,7 +56,8 @@
       "integrity": "df629467913adc1f960149fdfa3a3430ba8c20381c310fba096db244e6c3c9f6",
       "dependencies": [
         "jsr:@deno/loader",
-        "jsr:@std/path@^1.1.1"
+        "jsr:@std/path@^1.1.1",
+        "npm:esbuild@~0.25.5"
       ]
     },
     "@deno/loader@0.3.10": {
@@ -92,9 +93,6 @@
     },
     "@std/semver@1.0.7": {
       "integrity": "7d5f65391762dc4358abde80fc3354086ddb40101f140295e60f290c138887d0"
-    },
-    "@zweieuro/davparse@0.1.0": {
-      "integrity": "cf72617059fee3561986328198464ffa002a2c0ea46751893de6bacb1a234694"
     }
   },
   "npm": {
@@ -366,7 +364,13 @@
     "@types/node@20.12.12": {
       "integrity": "sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==",
       "dependencies": [
-        "undici-types"
+        "undici-types@5.26.5"
+      ]
+    },
+    "@types/node@22.15.15": {
+      "integrity": "sha512-R5muMcZob3/Jjchn5LcO8jdKwSCbzqmPB6ruBxMcf9kbxtniZHP327s6C37iOfuw8mbKK3cAQa7sEl7afLrQ8A==",
+      "dependencies": [
+        "undici-types@6.21.0"
       ]
     },
     "@types/tern@0.23.9": {
@@ -1024,7 +1028,7 @@
         "@eslint/json",
         "@microsoft/eslint-plugin-sdl",
         "@types/eslint",
-        "@types/node",
+        "@types/node@20.12.12",
         "eslint",
         "eslint-plugin-depend",
         "eslint-plugin-import",
@@ -2173,6 +2177,9 @@
     "undici-types@5.26.5": {
       "integrity": "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="
     },
+    "undici-types@6.21.0": {
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="
+    },
     "uri-js@4.4.1": {
       "integrity": "sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==",
       "dependencies": [
@@ -2278,7 +2285,6 @@
       "jsr:@david/dax@0.43.2",
       "jsr:@deno/esbuild-plugin@^1.2.1",
       "jsr:@std/semver@^1.0.5",
-      "jsr:@zweieuro/davparse@0.1",
       "npm:buffer@^6.0.3",
       "npm:esbuild@0.25.5",
       "npm:eslint-plugin-obsidianmd@~0.1.4",

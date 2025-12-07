@@ -13,7 +13,7 @@
     "@david/dax": "jsr:@david/dax@0.43.2",
     "@deno/esbuild-plugin": "jsr:@deno/esbuild-plugin@^1.2.1",
     "@std/semver": "jsr:@std/semver@^1.0.5",
-    "@zweieuro/davparse": "jsr:@zweieuro/davparse@^0.1.0",
+    "@zweieuro/davparse": "/home/zweieuro/Documents/private/davparse/mod.ts",
     "buffer": "npm:buffer@^6.0.3",
     "esbuild": "npm:esbuild@0.25.5",
     "eslint": "npm:eslint@^9.34.0",
