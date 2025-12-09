@@ -1,7 +1,7 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 import { DAVAccount, fetchAddressBooks, fetchVCards, updateVCard } from "tsdav";
-
+import { dataUriToBuffer } from "data-uri-to-buffer";
 import {
   authenticate,
   creatBinaryOrGetFile,
@@ -9,7 +9,12 @@ import {
   FolderSuggestModal,
 } from "./util.ts";
 import { cardParse } from "@zweieuro/davparse";
-import { decodeImage, matchEncoding, matchType } from "./image.ts";
+import {
+  createPhotoFile,
+  decodeImage,
+  matchEncoding,
+  matchType,
+} from "./image.ts";
 
 interface CardSyncSettings {
   username: string;
@@ -292,54 +297,16 @@ export default class CardSync extends Plugin {
         return;
       }
 
-      console.debug(parsed);
       // NOTE: Anything that may be "async" must be done beforehand
       // cant modify while editing fontmatter, race condition
 
-      const photo = parsed.get("PHOTO");
-      let photoFrontMatter: string | null = null;
-      if (photo) {
-        const encoding = parsed.getParam("PHOTO", "ENCODING");
-        const type = parsed.getParam("PHOTO", "TYPE");
-
-        if (encoding && type) {
-          const matched_encoding = matchEncoding(encoding);
-          const matched_type = matchType(type);
-
-          if (matched_encoding && matched_type) {
-            const getImage = decodeImage(
-              parsed.getSingleVal("PHOTO")!,
-              matched_encoding,
-              matched_type,
-            );
-
-            if (getImage) {
-              const path =
-                `${file.parent?.path}/${file.basename}_photo.${type}`;
-
-              const photo = await creatBinaryOrGetFile(this.app, path);
-
-              await this.app.vault.modifyBinary(
-                photo,
-                getImage.imageBuffer,
-              );
-              photoFrontMatter = `[[${photo.name}]]`;
-            } else {
-              console.warn("could not decode image? ");
-            }
-          }
-        }
-      }
+      const contactPhoto = await createPhotoFile(this.app, parsed, file);
 
       const note = parsed.getSingleVal("NOTE");
       if (note) {
         await this.app.vault.modify(
           file,
-          `# Note:\n${
-            photoFrontMatter
-              ? `!${photoFrontMatter.replace("]]", "|200x200]]")}` // NOTE: Very ugly hack, should prolly just save the name...
-              : ""
-          }\n${parsed.getSingleVal("note")}`,
+          `# Note:\n${parsed.getSingleVal("note")}`,
         );
       }
 
@@ -380,7 +347,9 @@ export default class CardSync extends Plugin {
               break;
             }
             case "PHOTO": {
-              fm[propKey] = photoFrontMatter;
+              if (contactPhoto) {
+                fm[propKey] = contactPhoto.frontmatter;
+              }
               break;
             }
             default:
@@ -400,6 +369,12 @@ export default class CardSync extends Plugin {
           file,
           `${file.parent!.path}/${fn}.md`,
         );
+
+        if (contactPhoto) {
+          await this.app.vault.delete(
+            contactPhoto.file,
+          );
+        }
       }
     }
 
@@ -525,25 +500,30 @@ export default class CardSync extends Plugin {
         let aliases: string[] | null = null as null | string[];
         let categories: string[] | null = null as null | string[];
 
-        await this.app.fileManager.processFrontMatter(file, (fm) => {
-          aliases = fm["aliases"] ?? null;
-          categories = fm["tags"] ?? null;
-          cardUrl = fm["obs_sync_url"] ?? null;
-        });
+        try {
+          await this.app.fileManager.processFrontMatter(file, (fm) => {
+            aliases = fm["aliases"] ?? null;
+            categories = fm["tags"] ?? null;
+            cardUrl = fm["obs_sync_url"] ?? null;
+          });
 
-        if (aliases) {
-          parsed.update_value("X-CUSTOM1", aliases.join(","));
-        }
-        if (categories) {
-          // WE always make it to an array, but if it is a single value then it is expected to stay a single value
-          if (categories.length === 1) {
-            parsed.update_value("categories", categories.at(0)!);
-          } else {
-            parsed.update_value("categories", {
-              valueListDelim: ",",
-              listVals: categories,
-            });
+          if (aliases) {
+            parsed.update_value("X-CUSTOM1", aliases.join(","));
           }
+          if (categories) {
+            // WE always make it to an array, but if it is a single value then it is expected to stay a single value
+            if (categories.length === 1) {
+              parsed.update_value("categories", categories.at(0)!);
+            } else {
+              parsed.update_value("categories", {
+                valueListDelim: ",",
+                listVals: categories,
+              });
+            }
+          }
+        } catch (e) {
+          console.error("error processing frontmatter for card", e, parsed);
+          continue;
         }
 
         if (!cardUrl) {
@@ -551,25 +531,32 @@ export default class CardSync extends Plugin {
           continue;
         }
 
-        if (parsedStringRepr === parsed.repr()) {
-          /// nothing changed, skip
-          continue;
+        try {
+          if (parsedStringRepr === parsed.repr()) {
+            /// nothing changed, skip
+            continue;
+          }
+        } catch (e) {
+          console.warn("Could not repr card?", e, parsed);
         }
+        try {
+          await updateVCard({
+            vCard: {
+              url: cardUrl,
+              data: parsed.repr(),
+            },
 
-        // await updateVCard({
-        //   vCard: {
-        //     url: cardUrl,
-        //     data: vCard.generate(parsed),
-        //   },
-        //
-        //   headers: headers,
-        // });
-        updated += 1;
-        console.debug("Updated ", cardId);
-        console.debug(parsedStringRepr, parsed.repr());
+            headers: headers,
+          });
+          updated += 1;
+          console.debug("Updated ", cardId);
+          console.debug(parsedStringRepr, parsed.repr());
+        } catch (e) {
+          console.warn("Could not upload card", e, parsed);
+        }
       }
-      new Notice(`Success updating ${updated} contacts`);
     }
+    new Notice(`Success updating ${updated} contacts`);
   }
 }
 class CardsyncSettingsTab extends PluginSettingTab {
