@@ -23,3 +23,6 @@ data.json
 
 dist
 vault-for-*
+
+# vault config file
+data.json

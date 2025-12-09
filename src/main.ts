@@ -1,20 +1,21 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import {
+  App,
+  Notice,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  TFile,
+} from "obsidian";
 
 import { DAVAccount, fetchAddressBooks, fetchVCards, updateVCard } from "tsdav";
-import { dataUriToBuffer } from "data-uri-to-buffer";
 import {
   authenticate,
-  creatBinaryOrGetFile,
   findFileByFrontmatter,
   FolderSuggestModal,
 } from "./util.ts";
 import { cardParse } from "@zweieuro/davparse";
-import {
-  createPhotoFile,
-  decodeImage,
-  matchEncoding,
-  matchType,
-} from "./image.ts";
+import { createPhotoFile } from "./image.ts";
+import { getRelevantCardInfoFromFile } from "./cardUtil.ts";
 
 interface CardSyncSettings {
   username: string;
@@ -24,6 +25,7 @@ interface CardSyncSettings {
   homeUrl: string;
   syncFolderLocation: string;
   cardIdKey: string;
+  writeOnModify: boolean;
 }
 
 const DEFAULT_SETTINGS: CardSyncSettings = {
@@ -34,6 +36,7 @@ const DEFAULT_SETTINGS: CardSyncSettings = {
   homeUrl: "",
   syncFolderLocation: "",
   cardIdKey: "UID",
+  writeOnModify: false,
 };
 
 export default class CardSync extends Plugin {
@@ -61,25 +64,18 @@ export default class CardSync extends Plugin {
       },
     });
 
-    this.addRibbonIcon(
-      "arrow-up-from-line",
-      "CardSync Write",
-      (_: MouseEvent) => {
-        this.syncUpClient();
-      },
-    );
-
-    this.addCommand({
-      id: "cardsync-sync-up",
-      name: "Sync contacts folder up",
-      callback: () => {
-        this.syncUpClient();
-      },
-    });
-
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.settingsTab = new CardsyncSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
+
+    this.app.vault.on("modify", (afile) => {
+      const file = this.app.vault.getFileByPath(afile.path);
+      if (!file) {
+        console.error("DavSync could not get file from abstract file path ?");
+        return;
+      }
+      this.handleFileModified(file);
+    });
   }
 
   override onunload() {
@@ -109,7 +105,13 @@ export default class CardSync extends Plugin {
     return true;
   }
 
-  async validateClient(): Promise<string> {
+  getDavData() {
+    if (!this.settingsValid()) {
+      console.warn("DavSync Settings Invalid");
+      new Notice("Dav settings invalid");
+      throw new Error("DavSync Settings invalid");
+    }
+
     const headers = {
       authorization: authenticate(
         this.settings.username,
@@ -124,19 +126,33 @@ export default class CardSync extends Plugin {
       homeUrl: this.settings.homeUrl,
     };
 
-    const addressBooks = await fetchAddressBooks({
-      account: account,
-      headers: headers,
-    });
+    return {
+      headers,
+      account,
+    };
+  }
+
+  async getAddressBook() {
+    const addressBooks = await fetchAddressBooks(this.getDavData());
 
     if (addressBooks.length !== 1) {
       console.warn(
         "Cannot determine adressbook. The credentials and info must return a SINGLE adressbook.",
       );
-      return "Credentials and 'fetchAdressBook' must return a single adressbook. Given info returned an array";
+      new Notice("Error: DavSync URL returned multiple address books");
+      return null;
     }
 
-    const addressBook = addressBooks[0];
+    return addressBooks[0];
+  }
+
+  async validateClient(): Promise<string> {
+    const { headers } = this.getDavData();
+
+    const addressBook = await this.getAddressBook();
+    if (!addressBook) {
+      return "Credentials and 'fetchAdressBook' must return a single adressbook. Given info returned an array";
+    }
 
     const cards = await fetchVCards({
       addressBook: addressBook,
@@ -172,36 +188,101 @@ export default class CardSync extends Plugin {
     return "";
   }
 
-  async syncDownClient(): Promise<void> {
-    await this.validateClient();
-
-    const headers = {
-      authorization: authenticate(
-        this.settings.username,
-        this.settings.password,
-      ),
-    };
-
-    const account: DAVAccount = {
-      accountType: "carddav",
-      serverUrl: this.settings.serverUrl,
-      rootUrl: this.settings.rootUrl,
-      homeUrl: this.settings.homeUrl,
-    };
-
-    const addressBooks = await fetchAddressBooks({
-      account: account,
-      headers: headers,
-    });
-
-    if (addressBooks.length !== 1) {
-      console.warn(
-        "Cannot determine adressbook. The credentials and info must return a SINGLE adressbook.",
-      );
+  async handleFileModified(file: TFile) {
+    if (!this.settingsValid() || !this.settings.writeOnModify) {
       return;
     }
 
-    const addressBook = addressBooks[0];
+    if (file.parent?.path !== this.settings.syncFolderLocation) {
+      console.debug("Not in sync folder");
+      return;
+    }
+
+    const { cardUrl, aliases, categories, note } =
+      await getRelevantCardInfoFromFile(
+        this.app,
+        file,
+      );
+
+    if (!cardUrl) {
+      console.warn("No card url prop for file", file.basename);
+      new Notice("Could not extract card url for updating");
+      return;
+    }
+
+    const { headers } = this.getDavData();
+
+    const addressBooks = await this.getAddressBook();
+
+    if (!addressBooks) {
+      return;
+    }
+
+    const contact = (await fetchVCards({
+      addressBook: addressBooks,
+      headers,
+      objectUrls: [cardUrl],
+    })).at(0);
+    if (!contact) {
+      console.warn("Could not fetch vCard from Url");
+      new Notice("Could not fetch vCard from Url");
+      return;
+    }
+
+    const parsed = cardParse.parseVCards(contact.data).at(0);
+
+    if (!parsed) {
+      console.warn("Could not parse contact from response");
+      new Notice("Failed to parse contact from url response");
+      return;
+    }
+
+    const parsedStringRepr = parsed.repr();
+
+    if (aliases) {
+      parsed.update_value("X-CUSTOM1", aliases.join(","));
+    }
+    if (categories) {
+      // WE always make it to an array, but if it is a single value then it is expected to stay a single value
+      if (typeof categories === "string") {
+        parsed.update_value("categories", categories);
+      } else if (categories.length === 1) {
+        parsed.update_value("categories", categories.at(0)!);
+      } else {
+        parsed.update_value("categories", {
+          valueListDelim: ",",
+          listVals: categories,
+        });
+      }
+    }
+
+    if (note) {
+      parsed.update_value("note", note);
+    }
+
+    if (parsedStringRepr === parsed.repr()) {
+      return;
+    }
+
+    await updateVCard({
+      vCard: {
+        url: cardUrl,
+        data: parsed.repr(),
+      },
+
+      headers: headers,
+    });
+
+    new Notice("Updated vCard");
+  }
+
+  async syncDownClient(): Promise<void> {
+    const { headers } = this.getDavData();
+
+    const addressBook = await this.getAddressBook();
+    if (!addressBook) {
+      return;
+    }
 
     const cards = await fetchVCards({
       addressBook: addressBook,
@@ -236,6 +317,7 @@ export default class CardSync extends Plugin {
         );
         return;
       }
+      console.debug(parsed);
 
       const idPropKey = this.settings.cardIdKey;
       let cardId = parsed.getSingleVal(idPropKey);
@@ -380,184 +462,6 @@ export default class CardSync extends Plugin {
 
     new Notice(`Success downloading ${cards.length} contacts`);
   }
-
-  async syncUpClient(): Promise<void> {
-    await this.validateClient();
-
-    const headers = {
-      authorization: authenticate(
-        this.settings.username,
-        this.settings.password,
-      ),
-    };
-
-    const account: DAVAccount = {
-      accountType: "carddav",
-      serverUrl: this.settings.serverUrl,
-      rootUrl: this.settings.rootUrl,
-      homeUrl: this.settings.homeUrl,
-    };
-
-    const addressBooks = await fetchAddressBooks({
-      account: account,
-      headers: headers,
-    });
-
-    if (addressBooks.length !== 1) {
-      console.warn(
-        "Cannot determine adressbook. The credentials and info must return a SINGLE adressbook.",
-      );
-      return;
-    }
-
-    const addressBook = addressBooks[0];
-
-    const cards = await fetchVCards({
-      addressBook: addressBook,
-      headers: headers,
-    });
-
-    let updated = 0;
-    for (const card of cards) {
-      if (
-        typeof card.data !== "string" || card.data === null ||
-        card.data === undefined
-      ) {
-        console.warn(
-          "A contact in the list did not return its' data a as a 'string'. Cannot parse.",
-        );
-        return;
-      }
-
-      const parsed_list = cardParse.parseVCards(card.data);
-
-      if (parsed_list.length !== 1) {
-        console.error(
-          "Only a single contact may exist in any dataset of a dav entry",
-        );
-        return;
-      }
-
-      const parsed = parsed_list.at(0)!;
-      const parsedStringRepr = parsed.repr();
-      if (!parsed.getSingleVal("fn")) {
-        console.error(
-          "A contact does not have an expected 'FN' (Full name) field. The property is expected to be an array with a single entry that has a non empty string value.",
-        );
-        return;
-      }
-
-      const idPropKey = this.settings.cardIdKey;
-      let cardId = parsed.getSingleVal(idPropKey);
-      if (!cardId) {
-        console.error(
-          `Contacts require the ID field set by your settings ${this.settings.cardIdKey}, must have single entry`,
-        );
-        return;
-      }
-
-      // get the unique ID for the current card
-      if (!cardId) {
-        console.error(
-          `Contacts require the ID field set by your settings ${idPropKey}, must have single entry`,
-          cardId,
-        );
-        return;
-      } else {
-        // remove any nesting
-        cardId = cardId.replaceAll(/[\"|']/g, "");
-        // open existing files if possible
-
-        const fileFolder = this.settings.syncFolderLocation;
-
-        // get a new file or find the existing file
-        const file = await findFileByFrontmatter(
-          this.app,
-          fileFolder,
-          idPropKey,
-          cardId,
-        );
-
-        if (file === null) {
-          console.error("could not find file for ID", idPropKey, cardId);
-          continue;
-        }
-
-        // extract the "note" section
-
-        const content = await this.app.vault.read(file);
-        const split = content.split("# Note:\n");
-
-        if (split.length === 1) {
-          // there is no note
-        } else if (split.length === 2) {
-          parsed.update_value("note", split.at(1)!);
-        }
-
-        // update aliases, and get the update url
-
-        let cardUrl: string | null = null;
-        let aliases: string[] | null = null as null | string[];
-        let categories: string[] | null = null as null | string[];
-
-        try {
-          await this.app.fileManager.processFrontMatter(file, (fm) => {
-            aliases = fm["aliases"] ?? null;
-            categories = fm["tags"] ?? null;
-            cardUrl = fm["obs_sync_url"] ?? null;
-          });
-
-          if (aliases) {
-            parsed.update_value("X-CUSTOM1", aliases.join(","));
-          }
-          if (categories) {
-            // WE always make it to an array, but if it is a single value then it is expected to stay a single value
-            if (categories.length === 1) {
-              parsed.update_value("categories", categories.at(0)!);
-            } else {
-              parsed.update_value("categories", {
-                valueListDelim: ",",
-                listVals: categories,
-              });
-            }
-          }
-        } catch (e) {
-          console.error("error processing frontmatter for card", e, parsed);
-          continue;
-        }
-
-        if (!cardUrl) {
-          console.warn("Could not get update url from file/card id", cardId);
-          continue;
-        }
-
-        try {
-          if (parsedStringRepr === parsed.repr()) {
-            /// nothing changed, skip
-            continue;
-          }
-        } catch (e) {
-          console.warn("Could not repr card?", e, parsed);
-        }
-        try {
-          await updateVCard({
-            vCard: {
-              url: cardUrl,
-              data: parsed.repr(),
-            },
-
-            headers: headers,
-          });
-          updated += 1;
-          console.debug("Updated ", cardId);
-          console.debug(parsedStringRepr, parsed.repr());
-        } catch (e) {
-          console.warn("Could not upload card", e, parsed);
-        }
-      }
-    }
-    new Notice(`Success updating ${updated} contacts`);
-  }
 }
 class CardsyncSettingsTab extends PluginSettingTab {
   plugin: CardSync;
@@ -595,7 +499,7 @@ Changing any kind of ID can have unintended side effects with other software!`,
     const makeTextSetting = (
       label: string,
       descr: string,
-      settingsfield: keyof CardSyncSettings,
+      settingsfield: Exclude<keyof CardSyncSettings, "writeOnModify">,
     ) => {
       new Setting(containerEl)
         .setName(label)
@@ -698,6 +602,18 @@ Changing any kind of ID can have unintended side effects with other software!`,
             }
 
             this.plugin.syncDownClient();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("Upload on Modify")
+      .setDesc(
+        "When a contact is modified, attempt to sync that contact upwards",
+      ).addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.writeOnModify)
+          .onChange((newVal) => {
+            this.plugin.settings.writeOnModify = newVal;
+            this.plugin.saveSettings();
           });
       });
   }
