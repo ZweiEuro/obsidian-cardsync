@@ -20,7 +20,7 @@ enum photo_type_t {
 }
 
 export function matchEncoding(str: string): photo_encoding_t | null {
-  switch (str) {
+  switch (str.toLowerCase()) {
     case "b":
     case "base64":
     case "B":
@@ -31,7 +31,7 @@ export function matchEncoding(str: string): photo_encoding_t | null {
 }
 
 export function matchType(str: string): photo_type_t | null {
-  switch (str) {
+  switch (str.toLowerCase()) {
     case "jpeg":
       return photo_type_t.jpg;
     case "jpg":
@@ -95,7 +95,9 @@ export async function createPhotoFile(app: App, card: vCard, cardFile: TFile) {
 
     if (uri_data) {
       image_file_data = uri_data.buffer;
-      fileEnding = uri_data.type.replace("image/", ""); // cleanup types
+      const fileEndingStr = uri_data.type.match(/image\/(\w*)/)?.at(1)!; // cleanup types
+
+      fileEnding = matchType(fileEndingStr);
     } else if (
       card.getParam("PHOTO", "TYPE") && card.getParam("PHOTO", "ENCODING")
     ) {

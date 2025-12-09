@@ -17,6 +17,10 @@ import { cardParse } from "@zweieuro/davparse";
 import { createPhotoFile } from "./image.ts";
 import { getRelevantCardInfoFromFile } from "./cardUtil.ts";
 
+async function wait(ms: number) {
+  await new Promise((f) => setTimeout(f, ms));
+}
+
 interface CardSyncSettings {
   username: string;
   password: string;
@@ -44,6 +48,8 @@ export default class CardSync extends Plugin {
 
   settingsTab: CardsyncSettingsTab | null = null;
 
+  currently_pulling = false;
+
   override async onload() {
     await this.loadSettings();
 
@@ -52,7 +58,13 @@ export default class CardSync extends Plugin {
       "arrow-down-to-line",
       "CardSync Read",
       (_: MouseEvent) => {
+        this.currently_pulling = true;
+        console.log("pulling");
         this.syncDownClient();
+        console.log("done pulling");
+        wait(2000).then(() => {
+          this.currently_pulling = false;
+        });
       },
     );
     // This adds an editor command that can perform some operation on the current editor instance
@@ -60,7 +72,11 @@ export default class CardSync extends Plugin {
       id: "cardsync-sync-down",
       name: "Sync contacts folder down",
       callback: () => {
+        this.currently_pulling = true;
         this.syncDownClient();
+        wait(2000).then(() => {
+          this.currently_pulling = false;
+        });
       },
     });
 
@@ -189,12 +205,15 @@ export default class CardSync extends Plugin {
   }
 
   async handleFileModified(file: TFile) {
-    if (!this.settingsValid() || !this.settings.writeOnModify) {
+    if (
+      this.currently_pulling ||
+      !this.settingsValid() ||
+      !this.settings.writeOnModify
+    ) {
       return;
     }
 
     if (file.parent?.path !== this.settings.syncFolderLocation) {
-      console.debug("Not in sync folder");
       return;
     }
 
@@ -205,7 +224,8 @@ export default class CardSync extends Plugin {
       );
 
     if (!cardUrl) {
-      console.warn("No card url prop for file", file.basename);
+      console.warn("No card url prop for file", file.basename),
+        await getRelevantCardInfoFromFile(this.app, file);
       new Notice("Could not extract card url for updating");
       return;
     }
@@ -317,7 +337,6 @@ export default class CardSync extends Plugin {
         );
         return;
       }
-      console.debug(parsed);
 
       const idPropKey = this.settings.cardIdKey;
       let cardId = parsed.getSingleVal(idPropKey);
@@ -600,8 +619,11 @@ Changing any kind of ID can have unintended side effects with other software!`,
               this.display();
               return;
             }
-
+            this.plugin.currently_pulling = true;
             this.plugin.syncDownClient();
+            wait(2000).then(() => {
+              this.plugin.currently_pulling = false;
+            });
           });
       });
 
