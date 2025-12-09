@@ -62,7 +62,7 @@ export default class CardSync extends Plugin {
         console.log("pulling");
         this.syncDownClient();
         console.log("done pulling");
-        wait(2000).then(() => {
+        wait(5000).then(() => {
           this.currently_pulling = false;
         });
       },
@@ -74,7 +74,7 @@ export default class CardSync extends Plugin {
       callback: () => {
         this.currently_pulling = true;
         this.syncDownClient();
-        wait(2000).then(() => {
+        wait(5000).then(() => {
           this.currently_pulling = false;
         });
       },
@@ -277,10 +277,19 @@ export default class CardSync extends Plugin {
     }
 
     if (note) {
-      parsed.update_value("note", note);
+      if (!parsed.update_value("note", note)) {
+        // if the update fails set it manually
+        parsed.set({
+          propName: "note",
+          groupName: null,
+          params: null,
+          value: note,
+        });
+      }
     }
 
     if (parsedStringRepr === parsed.repr()) {
+      console.debug("Nothing to update", parsed);
       return;
     }
 
@@ -408,6 +417,12 @@ export default class CardSync extends Plugin {
         await this.app.vault.modify(
           file,
           `# Note:\n${parsed.getSingleVal("note")}`,
+        );
+      } else {
+        // create the note field anyways
+        await this.app.vault.modify(
+          file,
+          `# Note:\n`,
         );
       }
 
