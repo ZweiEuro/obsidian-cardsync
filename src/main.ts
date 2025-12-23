@@ -260,7 +260,14 @@ export default class CardSync extends Plugin {
     const parsedStringRepr = parsed.repr();
 
     if (aliases) {
-      parsed.update_value("X-CUSTOM1", aliases.join(","));
+      if (parsed.update_value("X-CUSTOM1", aliases.join(",")) === false) {
+        parsed.set({
+          propName: "X-CUSTOM1",
+          groupName: null,
+          params: null,
+          value: aliases.join(","),
+        });
+      }
     }
     if (categories) {
       // WE always make it to an array, but if it is a single value then it is expected to stay a single value
@@ -416,14 +423,11 @@ export default class CardSync extends Plugin {
       if (note) {
         await this.app.vault.modify(
           file,
-          `# Note:\n${parsed.getSingleVal("note")}`,
+          parsed.getSingleVal("note") ?? "",
         );
       } else {
         // create the note field anyways
-        await this.app.vault.modify(
-          file,
-          `# Note:\n`,
-        );
+        await this.app.vault.modify(file, ``);
       }
 
       //NOTE: DO NOT make this async, for some reason some thing break.

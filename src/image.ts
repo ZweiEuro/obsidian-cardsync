@@ -1,8 +1,8 @@
 import { Buffer } from "buffer";
-import { vCard } from "../../davparse/card/carddav.ts";
 import { dataUriToBuffer, ParsedDataURI } from "data-uri-to-buffer";
 import { App, TFile } from "obsidian";
 import { creatBinaryOrGetFile } from "./util.ts";
+import { vCard } from "@zweieuro/davparse";
 // helper to deal with images
 
 enum photo_encoding_t {

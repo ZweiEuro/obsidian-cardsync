@@ -24,13 +24,6 @@ export async function getRelevantCardInfoFromFile(app: App, file: TFile) {
 
 export async function parseNoteFromFile(app: App, file: TFile) {
   const content = await app.vault.read(file);
-  const split = content.split("# Note:\n");
-
-  if (split.length === 1) {
-    // there is no note
-  } else if (split.length === 2) {
-    return split.at(1);
-  }
-
-  return null;
+  const split = content.split("---\n");
+  return split.at(2);
 }
