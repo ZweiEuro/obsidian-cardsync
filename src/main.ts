@@ -15,7 +15,12 @@ import {
 } from "./util.ts";
 import { cardParse } from "@zweieuro/davparse";
 import { createPhotoFile } from "./image.ts";
-import { getRelevantCardInfoFromFile } from "./cardUtil.ts";
+import {
+  getRelevantCardInfoFromFile,
+  hasRelaventCardDiff,
+  vCardFromFile,
+  vCardToFile,
+} from "./cardUtil.ts";
 
 async function wait(ms: number) {
   await new Promise((f) => setTimeout(f, ms));
@@ -243,6 +248,7 @@ export default class CardSync extends Plugin {
       headers,
       objectUrls: [cardUrl],
     })).at(0);
+
     if (!contact) {
       console.warn("Could not fetch vCard from Url");
       new Notice("Could not fetch vCard from Url");
@@ -257,55 +263,21 @@ export default class CardSync extends Plugin {
       return;
     }
 
-    const parsedStringRepr = parsed.repr();
+    const fileCard = await vCardFromFile(this.app, file);
 
-    if (aliases) {
-      if (parsed.update_value("X-CUSTOM1", aliases.join(",")) === false) {
-        parsed.set({
-          propName: "X-CUSTOM1",
-          groupName: null,
-          params: null,
-          value: aliases.join(","),
-        });
-      }
-    }
-    if (categories) {
-      // WE always make it to an array, but if it is a single value then it is expected to stay a single value
-      if (typeof categories === "string") {
-        parsed.update_value("categories", categories);
-      } else if (categories.length === 1) {
-        parsed.update_value("categories", categories.at(0)!);
-      } else {
-        parsed.update_value("categories", {
-          valueListDelim: ",",
-          listVals: categories,
-        });
-      }
-    }
+    // some things we HAVE to ignore
+    fileCard.delete("OBS_SYNC_URL");
+    fileCard.delete("PHOTO");
 
-    if (note) {
-      if (!parsed.update_value("note", note)) {
-        // if the update fails set it manually
-        parsed.set({
-          propName: "note",
-          groupName: null,
-          params: null,
-          value: note,
-        });
-      }
-    }
+    parsed.delete("PHOTO");
 
-    if (parsedStringRepr === parsed.repr()) {
+    if (!hasRelaventCardDiff(fileCard, parsed)) {
       console.debug("Nothing to update", parsed);
       return;
     }
 
     await updateVCard({
-      vCard: {
-        url: cardUrl,
-        data: parsed.repr(),
-      },
-
+      vCard: { url: cardUrl, data: fileCard.repr() },
       headers: headers,
     });
 
@@ -346,6 +318,13 @@ export default class CardSync extends Plugin {
       }
 
       const parsed = parsed_list.at(0)!;
+
+      parsed.set({
+        propName: "OBS_SYNC_URL",
+        groupName: null,
+        params: null,
+        value: card.url,
+      });
 
       if (!parsed.getSingleVal("fn")) {
         console.error(
@@ -407,94 +386,22 @@ export default class CardSync extends Plugin {
           );
           return;
         }
-      }
-
-      if (!file) {
-        console.warn("could not create or find file? ");
-        return;
-      }
-
-      // NOTE: Anything that may be "async" must be done beforehand
-      // cant modify while editing fontmatter, race condition
-
-      const contactPhoto = await createPhotoFile(this.app, parsed, file);
-
-      const note = parsed.getSingleVal("NOTE");
-      if (note) {
-        await this.app.vault.modify(
-          file,
-          parsed.getSingleVal("note") ?? "",
-        );
-      } else {
-        // create the note field anyways
-        await this.app.vault.modify(file, ``);
-      }
-
-      //NOTE: DO NOT make this async, for some reason some thing break.
-      // Seems that obsidian is partially updating the fontmatter, making this object invalid during the process. which is not exactly good
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        fm["obs_sync_url"] = card.url;
-
-        for (const propKey of parsed.get_data().keys()) {
-          // map the prop into a single value or an array
-          const propValue = parsed.get(propKey);
-          if (
-            !propValue ||
-            (typeof propValue.value !== "string" &&
-              propValue.value.listVals.length === 0)
-          ) {
-            continue;
-          }
-          delete fm[propKey];
-
-          switch (propKey) {
-            case "X-CUSTOM1":
-              fm["aliases"] = parsed.getSingleVal("X-CUSTOM1")!.split(",");
-
-              break;
-            case "CATEGORIES": {
-              const categories = propValue.value;
-              if (typeof categories === "string") {
-                fm["tags"] = categories;
-              } else {
-                fm["tags"] = categories.listVals;
-              }
-
-              break;
-            }
-            case "NOTE": {
-              //skip, parsed beforehand
-              break;
-            }
-            case "PHOTO": {
-              if (contactPhoto) {
-                fm[propKey] = contactPhoto.frontmatter;
-              }
-              break;
-            }
-            default:
-              if (typeof propValue.value === "string") {
-                fm[propKey] = propValue.value;
-              } else {
-                fm[propKey] = propValue.value.listVals;
-              }
-          }
+        if (!file) {
+          console.warn("could not create or find file? ");
+          return;
         }
-      });
+      }
+
+      await vCardToFile(this.app, file, parsed);
 
       // check if the name changed
       if (file.name !== `${fn}.md`) {
-        console.log("moving, name missmatch ", file.name, fn);
+        console.log("moving, name missmatch from ", file.name, " to ", fn);
         await this.app.fileManager.renameFile(
           file,
           `${file.parent!.path}/${fn}.md`,
         );
-
-        if (contactPhoto) {
-          await this.app.vault.delete(
-            contactPhoto.file,
-          );
-        }
+        console.warn("fix changed name for contact photo");
       }
     }
 

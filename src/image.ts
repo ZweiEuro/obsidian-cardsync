@@ -99,10 +99,10 @@ export async function createPhotoFile(app: App, card: vCard, cardFile: TFile) {
 
       fileEnding = matchType(fileEndingStr);
     } else if (
-      card.getParam("PHOTO", "TYPE") && card.getParam("PHOTO", "ENCODING")
+      card.getParam("PHOTO", "ENCODING")
     ) {
       const encoding = card.getParam("PHOTO", "ENCODING")!;
-      const type = card.getParam("PHOTO", "TYPE")!;
+      const type = card.getParam("PHOTO", "TYPE") ?? "jpeg";
 
       const matched_encoding = matchEncoding(encoding);
       const matched_type = matchType(type);
@@ -119,7 +119,11 @@ export async function createPhotoFile(app: App, card: vCard, cardFile: TFile) {
         }
         fileEnding = matched_type;
       } else {
-        console.warn("could not match encoding or type");
+        console.warn(
+          "could not match encoding or type...  encoding, type:",
+          encoding,
+          type,
+        );
       }
     }
     // write it to file
@@ -139,7 +143,7 @@ export async function createPhotoFile(app: App, card: vCard, cardFile: TFile) {
         image_file_data,
       );
 
-      return { frontmatter: `[[${photo.name}]]`, file: photo };
+      return { frontmatter_photo_text: `[[${photo.name}]]`, file: photo };
     } else {
       console.warn("Could not parse image data");
     }
