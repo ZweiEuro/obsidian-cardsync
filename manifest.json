@@ -1,11 +1,13 @@
 {
   "id": "cardsync",
-  "name": "Card Sync",
+  "name": "DAV contact card sync",
   "version": "0.0.1",
   "minAppVersion": "1.7.2",
   "description": "Card sync plugin to sync carddav compatible contact lists",
-  "author": "NoName",
+  "author": "ZweiEuro",
   "authorUrl": "NoUrl",
-  "fundingUrl": "NoFunding",
+  "fundingUrl": {
+		"Bitcoin": "bc1qk2sckmeuytdyh5w0t9sjn46gdw3chc23ssqklm"
+	},
   "isDesktopOnly": false
 }
