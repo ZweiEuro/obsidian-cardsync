@@ -2289,6 +2289,7 @@
       "jsr:@david/dax@0.43.2",
       "jsr:@deno/esbuild-plugin@^1.2.1",
       "jsr:@std/semver@^1.0.5",
+      "jsr:@zweieuro/davparse@0.1.7",
       "npm:buffer@^6.0.3",
       "npm:data-uri-to-buffer@^6.0.2",
       "npm:esbuild@0.25.5",

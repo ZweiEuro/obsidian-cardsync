@@ -95,11 +95,18 @@ export async function vCardFromFile(app: App, file: TFile) {
 
         default: {
           if (Array.isArray(value)) {
+            let delim = ",";
+            switch (key) {
+              case "N":
+                delim = ";";
+                break;
+            }
+
             card.set({
               propName: key,
               groupName: null,
               params: [],
-              value: { listVals: value, valueListDelim: "," },
+              value: { listVals: value, valueListDelim: delim },
             });
           } else {
             card.set({
